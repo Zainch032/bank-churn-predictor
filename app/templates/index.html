@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Churn Predictor</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="/static/style.css"/>
+</head>
+<body>
+
+<!-- ══ SIDEBAR ══ -->
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-icon">
+      <svg width="17" height="17" fill="none" viewBox="0 0 24 24">
+        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" stroke="white" stroke-width="2" stroke-linecap="round"/>
+        <circle cx="9" cy="7" r="4" stroke="white" stroke-width="2"/>
+        <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" stroke="white" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <span>ChurnML</span>
+  </div>
+
+  <div class="nav-section">Navigation</div>
+  <a class="nav-item active" href="#" onclick="switchTab('predict', this); return false;">
+    <svg width="15" height="15" fill="none" viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    Predict
+  </a>
+  <a class="nav-item" href="#" onclick="switchTab('insights', this); return false;">
+    <svg width="15" height="15" fill="none" viewBox="0 0 24 24"><path d="M18 20V10M12 20V4M6 20v-6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    EDA Insights
+  </a>
+
+  <div class="nav-section">Tools</div>
+ 
+  <a class="nav-item" href="/docs" target="_blank">
+    <svg width="15" height="15" fill="none" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" stroke-width="2"/><polyline points="14 2 14 8 20 8" stroke="currentColor" stroke-width="2"/></svg>
+    API Docs
+  </a>
+
+  <div class="sidebar-footer">
+    Dataset: 10,000 customers<br/>
+    Overall churn rate: <span class="churn-rate">20.4%</span>
+  </div>
+</aside>
+
+<!-- ══ MAIN ══ -->
+<div class="main">
+
+  <!-- Topbar -->
+  <div class="topbar">
+    <h2>Customer Churn Prediction</h2>
+    <div class="topbar-right">
+      <div class="status-pill"><div class="dot"></div>API Online</div>
+      <div class="avatar">ML</div>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <div class="tab active" id="tab-predict" onclick="switchTab('predict', this)">Predict Churn</div>
+    <div class="tab" id="tab-insights" onclick="switchTab('insights', this)">EDA Insights</div>
+  </div>
+
+  <div class="content">
+
+    <!-- ══ PREDICT PANEL ══ -->
+    <div class="tab-panel active" id="panel-predict">
+      <div class="predict-layout">
+
+        <div class="card">
+          <div class="card-title"><div class="card-dot"></div>Customer Features</div>
+
+          <div class="section-label">Financial & Personal</div>
+          <div class="grid2">
+            <div class="field">
+              <label for="CreditScore">Credit Score</label>
+              <input type="number" id="CreditScore" placeholder="300 – 850" min="300" max="850"/>
+            </div>
+            <div class="field">
+              <label for="Age">Age</label>
+              <input type="number" id="Age" placeholder="18 – 100" min="18" max="100"/>
+            </div>
+            <div class="field">
+              <label for="Balance">Balance ($)</label>
+              <input type="number" id="Balance" placeholder="e.g. 75000" min="0"/>
+            </div>
+            <div class="field">
+              <label for="EstimatedSalary">Estimated Salary ($)</label>
+              <input type="number" id="EstimatedSalary" placeholder="e.g. 55000" min="0"/>
+            </div>
+          </div>
+
+          <hr class="div"/>
+
+          <div class="section-label">Account Details</div>
+          <div class="grid2">
+            <div class="field">
+              <label for="NumOfProducts">Number of Products</label>
+              <select id="NumOfProducts">
+                <option value="1">1</option>
+                <option value="2">2</option>
+                <option value="3">3</option>
+                <option value="4">4</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="IsActiveMember">Active Member</label>
+              <select id="IsActiveMember">
+                <option value="1">Yes</option>
+                <option value="0">No</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="Geography">Geography</label>
+              <select id="Geography">
+                <option value="France">France</option>
+                <option value="Germany">Germany</option>
+                <option value="Spain">Spain</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="Gender">Gender</label>
+              <select id="Gender">
+                <option value="Male">Male</option>
+                <option value="Female">Female</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="error-box" id="errorBox"></div>
+
+          <div class="btn-row">
+            <button class="btn-primary" id="predictBtn" onclick="predict()">
+              <svg width="13" height="13" fill="none" viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" stroke="white" stroke-width="2" stroke-linecap="round"/></svg>
+              Predict Churn
+            </button>
+            <button class="btn-secondary" onclick="resetForm()">Reset</button>
+          </div>
+        </div>
+
+        <!-- Right Panel -->
+        <div>
+          <div class="result-card" id="resultCard">
+            <div class="result-header">
+              <div>
+                <div class="result-label" id="resultLabel"></div>
+                <div class="result-verdict" id="resultVerdict"></div>
+                <div class="result-msg" id="resultMsg"></div>
+              </div>
+              <div class="risk-badge" id="riskBadge"></div>
+            </div>
+            <div class="prob-row">
+              <span class="prob-label" id="probLabel">Churn Probability</span>
+              <span class="prob-value" id="probValue"></span>
+            </div>
+            <div class="bar-bg"><div class="bar-fill" id="barFill"></div></div>
+          </div>
+
+          <div class="info-card" id="infoCard" style="display:none">
+            <h4>Submitted Values</h4>
+            <div class="info-row"><span class="info-key">Credit Score</span><span class="info-val" id="iCS"></span></div>
+            <div class="info-row"><span class="info-key">Age</span><span class="info-val" id="iAge"></span></div>
+            <div class="info-row"><span class="info-key">Balance</span><span class="info-val" id="iBal"></span></div>
+            <div class="info-row"><span class="info-key">Salary</span><span class="info-val" id="iSal"></span></div>
+            <div class="info-row"><span class="info-key">Products</span><span class="info-val" id="iProd"></span></div>
+            <div class="info-row"><span class="info-key">Active Member</span><span class="info-val" id="iActive"></span></div>
+            <div class="info-row"><span class="info-key">Geography</span><span class="info-val" id="iGeo"></span></div>
+            <div class="info-row"><span class="info-key">Gender</span><span class="info-val" id="iGen"></span></div>
+          </div>
+
+          <div class="info-card">
+            <h4>Risk Level Guide</h4>
+            <div class="risk-guide">
+              <div class="risk-item low">
+                <div class="risk-circle" style="background:#22c55e"></div>
+                <span class="risk-item-text">Low Risk</span>
+                <span class="risk-item-range" style="color:#16a34a">0 – 30%</span>
+              </div>
+              <div class="risk-item med">
+                <div class="risk-circle" style="background:#f59e0b"></div>
+                <span class="risk-item-text">Medium Risk</span>
+                <span class="risk-item-range" style="color:#d97706">30 – 60%</span>
+              </div>
+              <div class="risk-item high">
+                <div class="risk-circle" style="background:#ef4444"></div>
+                <span class="risk-item-text">High Risk</span>
+                <span class="risk-item-range" style="color:#dc2626">60 – 100%</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ══ INSIGHTS PANEL ══ -->
+    <div class="tab-panel" id="panel-insights">
+
+      <div class="insights-grid">
+        <div class="stat-card">
+          <div class="stat-icon">👥</div>
+          <div class="stat-value">10,000</div>
+          <div class="stat-label">Total Customers</div>
+          <div class="stat-sub">Training dataset size</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">📉</div>
+          <div class="stat-value" style="color:#ef4444">20.4%</div>
+          <div class="stat-label">Overall Churn Rate</div>
+          <div class="stat-sub">2,037 customers exited</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">🎂</div>
+          <div class="stat-value">44.8</div>
+          <div class="stat-label">Avg Age (Churned)</div>
+          <div class="stat-sub">vs 37.4 who stayed</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">💰</div>
+          <div class="stat-value" style="color:#f59e0b">$91k</div>
+          <div class="stat-label">Avg Balance (Churned)</div>
+          <div class="stat-sub">vs $72k who stayed</div>
+        </div>
+      </div>
+
+      <div class="insights-row">
+        <div class="insight-card">
+          <h3><span>🌍</span> Churn Rate by Geography</h3>
+          <div class="bar-row">
+            <div class="bar-meta"><span>Germany</span><span style="color:#ef4444">32.4%</span></div>
+            <div class="mini-bar-bg"><div class="mini-bar" style="width:65%;background:#ef4444"></div></div>
+          </div>
+          <div class="bar-row">
+            <div class="bar-meta"><span>France</span><span style="color:#f59e0b">16.2%</span></div>
+            <div class="mini-bar-bg"><div class="mini-bar" style="width:32%;background:#f59e0b"></div></div>
+          </div>
+          <div class="bar-row">
+            <div class="bar-meta"><span>Spain</span><span style="color:#22c55e">16.7%</span></div>
+            <div class="mini-bar-bg"><div class="mini-bar" style="width:33%;background:#22c55e"></div></div>
+          </div>
+          <div class="finding" style="margin-top:10px;padding-top:10px;border-top:1px solid #f1f5f9">
+            <div class="finding-icon">⚠️</div>
+            <div class="finding-text"><strong>Germany has 2× the churn rate</strong> of France and Spain. German customers also hold the highest average balances (~$120k), making this segment the biggest capital risk.</div>
+          </div>
+        </div>
+
+        <div class="insight-card">
+          <h3><span>📦</span> Churn Rate by No. of Products</h3>
+          <div class="bar-row">
+            <div class="bar-meta"><span>1 Product</span><span style="color:#f59e0b">27.7%</span></div>
+            <div class="mini-bar-bg"><div class="mini-bar" style="width:28%;background:#f59e0b"></div></div>
+          </div>
+          <div class="bar-row">
+            <div class="bar-meta"><span>2 Products</span><span style="color:#22c55e">7.6%</span></div>
+            <div class="mini-bar-bg"><div class="mini-bar" style="width:8%;background:#22c55e"></div></div>
+          </div>
+          <div class="bar-row">
+            <div class="bar-meta"><span>3 Products</span><span style="color:#ef4444">82.7%</span></div>
+            <div class="mini-bar-bg"><div class="mini-bar" style="width:83%;background:#ef4444"></div></div>
+          </div>
+          <div class="bar-row">
+            <div class="bar-meta"><span>4 Products</span><span style="color:#991b1b">100%</span></div>
+            <div class="mini-bar-bg"><div class="mini-bar" style="width:100%;background:#991b1b"></div></div>
+          </div>
+          <div class="finding" style="margin-top:10px;padding-top:10px;border-top:1px solid #f1f5f9">
+            <div class="finding-icon">✅</div>
+            <div class="finding-text"><strong>2 Products is the sweet spot</strong> — only 7.6% churn. Churn jumps exponentially beyond 2 products.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="insights-row">
+        <div class="insight-card">
+          <h3><span>⚡</span> Active Member Impact</h3>
+          <div class="bar-row">
+            <div class="bar-meta"><span>Inactive Members — Churned</span><span style="color:#ef4444">26.9%</span></div>
+            <div class="mini-bar-bg"><div class="mini-bar" style="width:54%;background:#ef4444"></div></div>
+          </div>
+          <div class="bar-row">
+            <div class="bar-meta"><span>Active Members — Churned</span><span style="color:#22c55e">14.3%</span></div>
+            <div class="mini-bar-bg"><div class="mini-bar" style="width:29%;background:#22c55e"></div></div>
+          </div>
+          <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap">
+            <span class="tag tag-red">Inactive → 2× churn risk</span>
+            <span class="tag tag-green">Active → higher retention</span>
+          </div>
+          <div class="finding" style="margin-top:12px;padding-top:12px;border-top:1px solid #f1f5f9">
+            <div class="finding-icon">💡</div>
+            <div class="finding-text">Inactive members are <strong>nearly twice as likely to churn</strong>. Re-engagement campaigns for inactive accounts are a high-priority retention lever.</div>
+          </div>
+        </div>
+
+        <div class="insight-card">
+          <h3><span>📊</span> Key Numeric Differences</h3>
+          <div class="info-row" style="font-size:12px;padding:8px 0;border-bottom:1px solid #f8fafc">
+            <span class="info-key" style="font-weight:600;color:#0f172a">Feature</span>
+            <span style="display:flex;gap:30px">
+              <span style="color:#22c55e;font-weight:600">Stayed</span>
+              <span style="color:#ef4444;font-weight:600">Churned</span>
+            </span>
+          </div>
+          <div class="info-row" style="font-size:12px;padding:8px 0;border-bottom:1px solid #f8fafc">
+            <span class="info-key">Avg Age</span>
+            <span style="display:flex;gap:40px"><span style="color:#22c55e;font-weight:600">37.4</span><span style="color:#ef4444;font-weight:600">44.8</span></span>
+          </div>
+          <div class="info-row" style="font-size:12px;padding:8px 0;border-bottom:1px solid #f8fafc">
+            <span class="info-key">Avg Balance</span>
+            <span style="display:flex;gap:16px"><span style="color:#22c55e;font-weight:600">$72k</span><span style="color:#ef4444;font-weight:600">$91k</span></span>
+          </div>
+          <div class="info-row" style="font-size:12px;padding:8px 0;border-bottom:1px solid #f8fafc">
+            <span class="info-key">Avg Credit Score</span>
+            <span style="display:flex;gap:16px"><span style="color:#22c55e;font-weight:600">651</span><span style="color:#ef4444;font-weight:600">645</span></span>
+          </div>
+          <div class="info-row" style="font-size:12px;padding:8px 0">
+            <span class="info-key">Avg Salary</span>
+            <span style="display:flex;gap:16px"><span style="color:#22c55e;font-weight:600">$100k</span><span style="color:#ef4444;font-weight:600">$101k</span></span>
+          </div>
+          <div class="finding" style="margin-top:10px;padding-top:10px;border-top:1px solid #f1f5f9">
+            <div class="finding-icon">🔍</div>
+            <div class="finding-text"><strong>Credit score & salary</strong> are nearly identical — they are <strong>not significant churn predictors</strong>. Age and balance are far more informative.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="insight-card" style="margin-bottom:14px">
+        <h3><span>🔑</span> Key EDA Findings</h3>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 24px">
+          <div>
+            <div class="finding">
+              <div class="finding-icon">🎂</div>
+              <div class="finding-text"><strong>Age is the #1 driver.</strong> Churned customers have a median age of ~45 vs ~35 for those who stayed, making it the strongest single predictor.</div>
+            </div>
+            <div class="finding">
+              <div class="finding-icon">💸</div>
+              <div class="finding-text"><strong>Counter-intuitive balance effect.</strong> High-balance customers churn more. The bank is losing its most valuable customers — a critical business risk.</div>
+            </div>
+            <div class="finding">
+              <div class="finding-icon">📅</div>
+              <div class="finding-text"><strong>Tenure has minimal impact.</strong> Churn distributions are nearly identical across tenure years. Customers with 0–1 year tenure show a slightly elevated risk.</div>
+            </div>
+          </div>
+          <div>
+            <div class="finding">
+              <div class="finding-icon">🚺</div>
+              <div class="finding-text"><strong>Gender gap.</strong> Female customers churn at a higher rate (~25%) compared to male customers (~16%), despite similar financial profiles.</div>
+            </div>
+            <div class="finding">
+              <div class="finding-icon">💳</div>
+              <div class="finding-text"><strong>Credit card ownership is neutral.</strong> Having or not having a credit card shows no significant difference in churn likelihood.</div>
+            </div>
+            <div class="finding">
+              <div class="finding-icon">🏦</div>
+              <div class="finding-text"><strong>Elite attrition.</strong> High-balance multi-product customers (4 products, avg $93k) show 100% churn — the bank fails to retain its wealthiest segment.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /insights -->
+  </div>
+</div>
+
+<script src="/static/app.js"></script>
+</body>
+</html>
