@@ -93,18 +93,20 @@ The final pipeline is served through a **FastAPI** backend with automatic Swagge
 
 ```
 bank-churn-predictor/
-├── main.py                  FastAPI app
-├── requirements.txt
-├── model/
-│   └── model_pipeline.pkl   Trained pipeline
-├── templates/
-│   └── index.html
-├── static/
-│   ├── style.css
-│   └── app.js
-└── notebooks/
-    ├── eda.ipynb
-    └── modelling.ipynb
+├── app/
+│   ├── main.py              FastAPI app
+│   ├── requirements.txt
+│   ├── templates/
+│   │   └── index.html
+│   └── static/
+│       ├── style.css
+│       └── app.js
+├── data/
+│   ├── Churn_Modelling.csv
+│   └── Cleanind_data.csv
+└── notebook/
+    ├── churn.ipynb
+    └── model.ipynb
 ```
 
 ---
@@ -114,8 +116,8 @@ bank-churn-predictor/
 ```bash
 git clone https://github.com/your-username/bank-churn-predictor.git
 cd bank-churn-predictor
-pip install -r requirements.txt
-uvicorn main:app --reload
+pip install -r app/requirements.txt
+uvicorn app.main:app --reload
 # open http://127.0.0.1:8000
 ```
 
@@ -129,6 +131,8 @@ uvicorn main:app --reload
 | Visualization | matplotlib, seaborn |
 | Backend | FastAPI, Uvicorn, Pydantic |
 | Frontend | HTML5, CSS3, Vanilla JS |
+
+ 
 
 ---
 
