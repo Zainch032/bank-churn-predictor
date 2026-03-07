@@ -1,8 +1,9 @@
 # 🏦 Bank Customer Churn Predictor
 
-**End-to-end machine learning project** — from raw data exploration to a live prediction API. Built to solve a real business problem: identifying bank customers likely to leave before they do.
+> *"The model scored 80% accuracy and caught zero churners. That's when the real work started."*
 
-> **Highlight:** Improved churn detection F1-score from **0.50 → 0.62** by diagnosing class imbalance and applying SMOTE — a 24% relative gain on the metric that actually matters.
+End-to-end ML project — EDA, SMOTE, multi-model benchmarking, and a live FastAPI service.
+Improved churn **F1-score: 0.50 → 0.62** (+24% relative gain on the metric that actually matters).
 
 ![Python](https://img.shields.io/badge/Python-3.10-blue?style=flat-square)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.111-green?style=flat-square)
@@ -11,131 +12,158 @@
 
 ---
 
-## The Problem
+## 💡 The Problem Worth Solving
 
-Retail banks lose customers silently. By the time someone closes their account, it's too late — and acquiring a replacement costs 5–7× more than keeping the original customer. The question this project answers is simple: **can we predict who's about to leave, early enough to do something about it?**
+Banks lose customers silently — no resignation letter, no complaint. By the time it's noticed, they're gone. Acquiring a replacement costs **5–7× more** than retention.
 
-The dataset has 10,000 customers, 14 features, and a 20% churn rate. That imbalance is the central challenge — and ignoring it is the most common mistake people make on this type of problem.
-
----
-
-## What Was Built
-
-A complete ML pipeline from scratch:
-
-- **Deep exploratory analysis** to find which features actually separate churners from stayers — and just as importantly, which ones don't
-- **Feature selection** based on statistical evidence, not assumptions
-- **Preprocessing pipeline** with scaling and encoding, structured to prevent data leakage
-- **Five classifiers benchmarked** side-by-side on the right metrics
-- **SMOTE** applied to fix the imbalance problem — the single change that moved the needle most
-- **REST API** built with FastAPI, serving predictions with probability scores and risk levels
-- **Interactive frontend** with a predict form and an EDA insights dashboard — no frameworks, pure HTML/CSS/JS
+10,000 customers. 14 features. 1 question: **who's about to leave?**
 
 ---
 
-## The Data Science Story
+## 🏗️ What Was Built
 
-### Starting Point — Exploratory Data Analysis
-
-Before touching a model, the full dataset was interrogated through EDA. This meant going beyond simple histograms: normalized crosstabs to measure churn rates per category, boxenplots to compare full distributions between churned and stayed groups, pivot tables aggregating multiple metrics across geography and exit status simultaneously, and skewness analysis across every numeric feature split by the target.
-
-The goal was to build a mental model of *who churns and why* — and to make feature selection a data-driven decision rather than a guess.
-
-**The most important findings:**
-
-— Age is the strongest signal. Customers who churned averaged 44.8 years old vs. 37.4 for those who stayed. No other feature had this level of distributional separation.
-
-— Germany has double the churn rate of France and Spain (32% vs. ~16%), and German customers also hold the highest average balances. Highest risk, highest value — a critical retention priority.
-
-— The product count relationship is non-linear and dramatic. Two products is the loyalty sweet spot at 7.6% churn. Three products jumps to 82.7%. Four products: 100% — every single customer with four products exited. This kind of pattern only surfaces if you look at churn rate *per value* rather than aggregate statistics.
-
-— Inactive members churn at nearly twice the rate of active ones. Engagement level is a more actionable lever than almost any financial metric.
-
-— Counter-intuitively, higher balance customers churn more. The bank is losing its wealthiest segment — the opposite of what you'd expect and exactly the kind of insight that justifies doing EDA properly.
-
-**What got dropped:** Credit score (651 vs. 645 across groups — statistically meaningless), estimated salary (virtually identical between groups), credit card ownership (no churn difference), and tenure (near-identical distributions across all years). Including these would have added noise, not signal.
+| Phase | Detail |
+|---|---|
+| 🔍 EDA | Crosstabs, boxenplots, pivot tables, heatmaps — every feature interrogated against the target |
+| ✂️ Feature Selection | 4 features dropped with statistical evidence — `CreditScore`, `EstimatedSalary`, `HasCrCard`, `Tenure` |
+| ⚙️ Preprocessing | Leak-proof `Pipeline` — `StandardScaler` + `OneHotEncoder` inside `ColumnTransformer` |
+| 🤖 Model Comparison | 5 classifiers benchmarked on Precision, Recall, F1, ROC-AUC — not accuracy |
+| ⚖️ SMOTE | Synthetic oversampling on training data only — F1 jumped **0.50 → 0.62** |
+| 🚀 Deployment | FastAPI REST API + HTML/CSS/JS frontend with prediction form and EDA insights tab |
 
 ---
 
-### The Imbalance Problem
+## 🔍 What the Data Said
 
-80% stayed, 20% churned. A model that predicts "stay" for every customer scores 80% accuracy and catches zero churners. Accuracy is the wrong metric entirely for this problem.
+Ran deep EDA across `churn.ipynb` before touching any model. The interesting part wasn't what predicted churn — it was what *didn't*.
 
-The baseline models — trained on the raw imbalanced data — hit an F1-score of **0.50** on the churn class. High precision, terrible recall. The model was cautious about labeling anyone as a churner, so it missed most of the actual ones.
+**Credit score, salary, tenure, credit card ownership** — four features that sound important — showed near-zero difference between churners and stayers. Dropped all four.
 
-**SMOTE (Synthetic Minority Over-sampling Technique)** generates synthetic minority-class samples by interpolating between existing ones in feature space — it's fundamentally different from just duplicating rows. Applied correctly inside the training pipeline (never touching the test set), it rebalanced the training distribution and forced the model to genuinely learn the minority class.
+What remained: age, geography, product count, balance, activity status. Five features carrying almost all the signal.
 
-The result: recall on churners jumped significantly, F1 moved from **0.50 → 0.62**. The model now catches more actual churners — which is the right trade-off, because in retention, missing a churner is far more costly than a false alarm.
-
----
-
-### Model Comparison
-
-Five models were trained and evaluated — Logistic Regression, K-Nearest Neighbors, Decision Tree, Random Forest, and Gradient Boosting — both with and without SMOTE. Every model was compared on **Precision, Recall, F1, and ROC-AUC** on the minority class, not overall accuracy.
-
-Gradient Boosting with SMOTE won on both F1 (0.62) and ROC-AUC (0.87). It handles the non-linear feature interactions in this dataset — Age × Geography × NumOfProducts — that simpler models can't capture. The trained pipeline (preprocessor + model) was serialized and deployed directly.
+> Full analysis in `notebook/churn.ipynb`
 
 ---
 
-### Deployment
+## 😮 3 Findings That Were Actually Surprising
 
-The final pipeline is served through a **FastAPI** backend with automatic Swagger documentation. The frontend has two sections: a prediction form where you enter customer details and get back a churn probability with a risk level, and an EDA insights tab summarizing the key findings from the analysis. Static assets are properly separated (HTML / CSS / JS), and the model loads once at startup.
+**High-balance customers churn MORE.**
+Churned customers averaged $91k vs. $72k for stayers. The bank is losing its wealthiest segment — counterintuitive and worth flagging as a strategy problem.
+
+**4 products = 100% churn rate.**
+Every customer with 4 products left. 2 products? 7.6% — the loyalty sweet spot. Completely invisible in a correlation matrix.
+
+**Germany is a country-sized red flag.**
+32% churn vs. ~16% in France and Spain — double — combined with the highest average balances (~$120k). Highest risk and highest value in the same segment.
 
 ---
 
-## Skills Demonstrated
+## ⚖️ SMOTE — Why It Moved the Needle
 
-`Exploratory Data Analysis` · `Statistical Feature Selection` · `Class Imbalance` · `SMOTE` · `scikit-learn Pipelines` · `ColumnTransformer` · `StandardScaler` · `OneHotEncoder` · `Logistic Regression` · `Random Forest` · `Gradient Boosting` · `Model Evaluation` · `F1-Score` · `ROC-AUC` · `Precision-Recall Trade-off` · `FastAPI` · `REST API Design` · `Jinja2` · `HTML/CSS/JS` · `End-to-End ML`
+Baseline models had a cautious bias — high precision, terrible recall. They only flagged churners when nearly certain, so they missed most of them.
+
+SMOTE synthesizes minority-class samples by interpolating in feature space (not duplicating rows), applied inside the pipeline on training data only — no leakage.
+
+| | Precision | Recall | F1 | ROC-AUC |
+|---|---|---|---|---|
+| Without SMOTE | 0.61 | 0.42 | 0.50 | 0.82 |
+| **With SMOTE** | **0.56** | **0.70** | **0.62** | **0.87** |
+
+Lower precision, much higher recall. In retention that's the right trade-off — a false alarm costs a retention email, a missed churner costs a customer.
 
 ---
 
-## Project Structure
+## 🤖 Model Comparison
+
+| Model | F1 (SMOTE) | ROC-AUC |
+|---|---|---|
+| Logistic Regression | 0.55 | 0.76 |
+| K-Nearest Neighbors | 0.52 | 0.74 |
+| Decision Tree | 0.53 | 0.72 |
+| Random Forest | 0.60 | 0.85 |
+| **Gradient Boosting** ✅ | **0.62** | **0.87** |
+
+> Full comparison in `notebook/model.ipynb`
+
+---
+
+## 📁 Project Structure
 
 ```
 bank-churn-predictor/
+│
 ├── app/
-│   ├── main.py              FastAPI app
+│   ├── main.py                  FastAPI application
 │   ├── requirements.txt
+│   ├── model/
+│   │   └── model_pipeline.pkl   Trained sklearn pipeline
 │   ├── templates/
 │   │   └── index.html
 │   └── static/
 │       ├── style.css
 │       └── app.js
+│
 ├── data/
-│   ├── Churn_Modelling.csv
-│   └── Cleanind_data.csv
+│   ├── Churn_Modelling.csv      Raw dataset
+│   └── Cleanind_data.csv        Cleaned version
+│
 └── notebook/
-    ├── churn.ipynb
-    └── model.ipynb
+    ├── churn.ipynb              EDA notebook
+    └── model.ipynb              Modelling, SMOTE, comparison
 ```
 
 ---
 
-## Quick Start
+## ⚡ Quick Start
 
 ```bash
 git clone https://github.com/your-username/bank-churn-predictor.git
 cd bank-churn-predictor
 pip install -r app/requirements.txt
 uvicorn app.main:app --reload
-# open http://127.0.0.1:8000
+# → http://127.0.0.1:8000
 ```
 
 ---
 
-## Tech Stack
+## 📡 API
 
-| | |
-|---|---|
-| Data & ML | Python, pandas, numpy, scikit-learn, imbalanced-learn |
-| Visualization | matplotlib, seaborn |
-| Backend | FastAPI, Uvicorn, Pydantic |
-| Frontend | HTML5, CSS3, Vanilla JS |
+```
+POST /predict   →  churn probability + risk level (Low / Medium / High)
+GET  /health    →  model load status
+GET  /docs      →  Swagger UI
+```
 
- 
+**Sample request:**
+```json
+{ "Age": 45, "Balance": 92000, "Geography": "Germany",
+  "Gender": "Female", "NumOfProducts": 1, "IsActiveMember": 0,
+  "CreditScore": 620, "EstimatedSalary": 72000 }
+```
+
+**Sample response:**
+```json
+{ "churn": true, "churn_probability": 0.78, "risk_level": "High",
+  "message": "Customer is likely to churn." }
+```
 
 ---
 
-## License
+## 🛠 Tech Stack
 
-MIT
+| | |
+|---|---|
+| Data & ML | pandas · numpy · scikit-learn · imbalanced-learn |
+| Visualization | matplotlib · seaborn |
+| Backend | FastAPI · Uvicorn · Pydantic · Jinja2 |
+| Frontend | HTML5 · CSS3 · Vanilla JS |
+
+---
+
+## Skills
+
+`EDA` · `Feature Selection` · `Class Imbalance` · `SMOTE` · `sklearn Pipelines` · `ColumnTransformer` · `Model Evaluation` · `F1-Score` · `ROC-AUC` · `Gradient Boosting` · `Random Forest` · `FastAPI` · `REST API` · `End-to-End ML`
+
+---
+
+*MIT License*
