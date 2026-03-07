@@ -33,36 +33,37 @@ Banks lose customers silently — no resignation letter, no complaint. By the ti
 
 ---
 
-## 🔍 What the Data Said
+## 🔍 Exploratory Data Analysis
 
-Ran deep EDA across `churn.ipynb` before touching any model. The interesting part wasn't what predicted churn — it was what *didn't*.
+The EDA wasn't just about understanding the data — it was about making every modeling decision defensible. Ran crosstab analysis on every categorical feature, boxenplots to compare full distributions (not just means), pivot tables aggregating multiple metrics simultaneously, and skewness checks on numeric features split by the target.
 
-**Credit score, salary, tenure, credit card ownership** — four features that sound important — showed near-zero difference between churners and stayers. Dropped all four.
+The goal: understand *who churns* before predicting it.
 
-What remained: age, geography, product count, balance, activity status. Five features carrying almost all the signal.
+### What actually separates churners from stayers
 
-> Full analysis in `notebook/churn.ipynb`
+**Age** is the single strongest signal. Churned customers averaged **44.8 years** vs. **37.4** for those who stayed — a 7-year gap that shows up consistently across all geographies and genders. No other numeric feature came close to this level of separation.
 
----
+**Geography** tells a stark story. Germany sits at **32.4% churn** while France and Spain hover around **16%**. That's double the rate — and German customers also hold the highest average balances (~$120k). Highest risk, highest value, same segment.
 
-## 😮 3 Findings That Were Actually Surprising
+**Number of products** has the most dramatic non-linear pattern in the dataset. Two products = **7.6% churn** (the loyalty sweet spot). Three products = **82.7%**. Four products = **100%** — every single customer left. This pattern is completely invisible in a correlation matrix and only surfaces when you look at churn rate per category.
 
-**High-balance customers churn MORE.**
-Churned customers averaged $91k vs. $72k for stayers. The bank is losing its wealthiest segment — counterintuitive and worth flagging as a strategy problem.
+**Active membership** is the most actionable lever. Inactive members churn at **26.9%** vs. **14.3%** for active ones — nearly double. Unlike age or geography, engagement can actually be influenced through targeted campaigns.
 
-**4 products = 100% churn rate.**
-Every customer with 4 products left. 2 products? 7.6% — the loyalty sweet spot. Completely invisible in a correlation matrix.
+**Balance** throws a curveball. Higher-balance customers churn *more* — churned customers averaged **$91k** vs. **$72k** for stayers. The bank is actively losing its wealthiest segment. That's not a data anomaly; it's a retention strategy failure.
 
-**Germany is a country-sized red flag.**
-32% churn vs. ~16% in France and Spain — double — combined with the highest average balances (~$120k). Highest risk and highest value in the same segment.
+### What doesn't predict churn at all
+
+This was just as important. **Credit score** (651 stayed vs. 645 churned), **estimated salary** ($100k vs. $101k), **credit card ownership**, and **tenure** — all showed near-zero difference between groups. Including these would have added noise, not signal. All four were dropped before modeling.
+
+> Full analysis with all visualizations in `notebook/churn.ipynb`
 
 ---
 
 ## ⚖️ SMOTE — Why It Moved the Needle
 
-Baseline models had a cautious bias — high precision, terrible recall. They only flagged churners when nearly certain, so they missed most of them.
+80% stayed, 20% churned. Baseline models trained on raw data had a cautious bias — high precision, terrible recall. They only flagged churners when nearly certain, missing most of them. F1 on the churn class: **0.50**.
 
-SMOTE synthesizes minority-class samples by interpolating in feature space (not duplicating rows), applied inside the pipeline on training data only — no leakage.
+SMOTE synthesizes new minority-class samples by interpolating between existing ones in feature space — fundamentally different from duplicating rows. Applied inside the pipeline on training data only, no leakage.
 
 | | Precision | Recall | F1 | ROC-AUC |
 |---|---|---|---|---|
@@ -82,6 +83,8 @@ Lower precision, much higher recall. In retention that's the right trade-off —
 | Decision Tree | 0.53 | 0.72 |
 | Random Forest | 0.60 | 0.85 |
 | **Gradient Boosting** ✅ | **0.62** | **0.87** |
+
+Gradient Boosting won because churn isn't linear — it captures the `Age × Geography × NumOfProducts` interactions that simpler models miss.
 
 > Full comparison in `notebook/model.ipynb`
 
