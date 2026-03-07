@@ -1,11 +1,11 @@
-# 🏦 Bank Customer Churn Predictor
+🏦 **Bank Customer Churn Predictor**
 
 > *"The model scored 80% accuracy and caught zero churners. That's when the real work started."*
 
 End-to-end ML project — EDA, SMOTE, multi-model benchmarking, and a live FastAPI service.
 Improved churn **F1-score: 0.50 → 0.62** (+24% relative gain on the metric that actually matters).
 
-![Python](https://img.shields.io/badge/Python-3.10-blue?style=flat-square)
+![Python](https://img.shields.io/badge/Python-3.11-blue?style=flat-square)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.111-green?style=flat-square)
 ![scikit-learn](https://img.shields.io/badge/scikit--learn-1.4-orange?style=flat-square)
 ![Status](https://img.shields.io/badge/status-complete-brightgreen?style=flat-square)
@@ -24,36 +24,39 @@ Banks lose customers silently — no resignation letter, no complaint. By the ti
 
 | Phase | Detail |
 |---|---|
-| 🔍 EDA | Crosstabs, boxenplots, pivot tables, heatmaps — every feature interrogated against the target |
-| ✂️ Feature Selection | 4 features dropped with statistical evidence — `CreditScore`, `EstimatedSalary`, `HasCrCard`, `Tenure` |
-| ⚙️ Preprocessing | Leak-proof `Pipeline` — `StandardScaler` + `OneHotEncoder` inside `ColumnTransformer` |
-| 🤖 Model Comparison | 5 classifiers benchmarked on Precision, Recall, F1, ROC-AUC — not accuracy |
-| ⚖️ SMOTE | Synthetic oversampling on training data only — F1 jumped **0.50 → 0.62** |
-| 🚀 Deployment | FastAPI REST API + HTML/CSS/JS frontend with prediction form and EDA insights tab |
+| 🔍 **EDA** | Crosstabs, boxenplots, pivot tables, heatmaps — every feature interrogated against the target |
+| ✂️ **Feature Selection** | 4 features dropped with statistical evidence — `CreditScore`, `EstimatedSalary`, `HasCrCard`, `Tenure` |
+| ⚙️ **Preprocessing** | Leak-proof `Pipeline` — `StandardScaler` + `OneHotEncoder` inside `ColumnTransformer` |
+| 🤖 **Model Comparison** | 5 classifiers benchmarked on Precision, Recall, F1, ROC-AUC — not accuracy |
+| ⚖️ **SMOTE** | Synthetic oversampling on training data only — F1 jumped **0.50 → 0.62** |
+| 🚀 **Deployment** | FastAPI REST API + HTML/CSS/JS frontend with prediction form and EDA insights tab |
 
 ---
 
 ## 🔍 Exploratory Data Analysis
 
-The EDA wasn't just about understanding the data — it was about making every modeling decision defensible. Ran crosstab analysis on every categorical feature, boxenplots to compare full distributions (not just means), pivot tables aggregating multiple metrics simultaneously, and skewness checks on numeric features split by the target.
+The EDA wasn't just about understanding the data — it was about making every modeling decision defensible. Crosstab analysis on categorical features, boxenplots to compare full distributions (not just means), pivot tables aggregating multiple metrics, and skewness checks on numeric features split by the target.
 
 The goal: understand *who churns* before predicting it.
 
 ### What actually separates churners from stayers
 
-**Age** is the single strongest signal. Churned customers averaged **44.8 years** vs. **37.4** for those who stayed — a 7-year gap that shows up consistently across all geographies and genders. No other numeric feature came close to this level of separation.
-
-**Geography** tells a stark story. Germany sits at **32.4% churn** while France and Spain hover around **16%**. That's double the rate — and German customers also hold the highest average balances (~$120k). Highest risk, highest value, same segment.
-
-**Number of products** has the most dramatic non-linear pattern in the dataset. Two products = **7.6% churn** (the loyalty sweet spot). Three products = **82.7%**. Four products = **100%** — every single customer left. This pattern is completely invisible in a correlation matrix and only surfaces when you look at churn rate per category.
-
-**Active membership** is the most actionable lever. Inactive members churn at **26.9%** vs. **14.3%** for active ones — nearly double. Unlike age or geography, engagement can actually be influenced through targeted campaigns.
-
-**Balance** throws a curveball. Higher-balance customers churn *more* — churned customers averaged **$91k** vs. **$72k** for stayers. The bank is actively losing its wealthiest segment. That's not a data anomaly; it's a retention strategy failure.
+- **Age** is the single strongest signal. Churned customers averaged **44.8 years** vs. **37.4** for those who stayed — a 7-year gap that shows up consistently across all geographies and genders.
+- **Geography** tells a stark story. Germany sits at **32.4% churn** while France and Spain hover around **16%**. That's double the rate — and German customers also hold the highest average balances (~$120k).
+- **Number of products** has the most dramatic non-linear pattern. Two products = **7.6% churn** (loyalty sweet spot). Three products = **82.7%**. Four products = **100%** — every single customer left.
+- **Active membership** is the most actionable lever. Inactive members churn at **26.9%** vs. **14.3%** for active ones — nearly double.
+- **Balance** is counter-intuitive. Higher-balance customers churn *more* — churned customers averaged **$91k** vs. **$72k** for stayers.
 
 ### What doesn't predict churn at all
 
-This was just as important. **Credit score** (651 stayed vs. 645 churned), **estimated salary** ($100k vs. $101k), **credit card ownership**, and **tenure** — all showed near-zero difference between groups. Including these would have added noise, not signal. All four were dropped before modeling.
+Just as important:
+
+- **Credit score** (651 stayed vs. 645 churned)
+- **Estimated salary** ($100k vs. $101k)
+- **Credit card ownership**
+- **Tenure**
+
+All showed near-zero difference between groups and were dropped before modeling to reduce noise.
 
 > Full analysis with all visualizations in `notebook/churn.ipynb`
 
@@ -70,7 +73,7 @@ SMOTE synthesizes new minority-class samples by interpolating between existing o
 | Without SMOTE | 0.61 | 0.42 | 0.50 | 0.82 |
 | **With SMOTE** | **0.56** | **0.70** | **0.62** | **0.87** |
 
-Lower precision, much higher recall. In retention that's the right trade-off — a false alarm costs a retention email, a missed churner costs a customer.
+Lower precision, much higher recall. For retention this is the right trade-off — a false alarm costs a retention email, a missed churner costs a customer.
 
 ---
 
@@ -92,27 +95,29 @@ Gradient Boosting won because churn isn't linear — it captures the `Age × Geo
 
 ## 📁 Project Structure
 
-```
+```text
 bank-churn-predictor/
 │
-├── app/
-│   ├── main.py                  FastAPI application
-│   ├── requirements.txt
-│   ├── model/
-│   │   └── model_pipeline.pkl   Trained sklearn pipeline
-│   ├── templates/
-│   │   └── index.html
-│   └── static/
-│       ├── style.css
-│       └── app.js
+├── main.py                    # FastAPI application (backend + API)
+├── requirements.txt           # Python dependencies
+│
+├── model/
+│   └── model_pipeline.pkl     # Trained sklearn pipeline
+│
+├── templates/
+│   └── index.html             # Frontend UI (Jinja2 template)
+│
+├── static/
+│   ├── style.css              # Modern dashboard styling
+│   └── app.js                 # Frontend logic & API calls
 │
 ├── data/
-│   ├── Churn_Modelling.csv      Raw dataset
-│   └── Cleanind_data.csv        Cleaned version
+│   ├── Churn_Modelling.csv    # Raw dataset
+│   └── Cleanind_data.csv      # Cleaned version
 │
 └── notebook/
-    ├── churn.ipynb              EDA notebook
-    └── model.ipynb              Modelling, SMOTE, comparison
+    ├── churn.ipynb            # EDA notebook
+    └── model.ipynb            # Modelling, SMOTE, comparison
 ```
 
 ---
@@ -122,44 +127,71 @@ bank-churn-predictor/
 ```bash
 git clone https://github.com/your-username/bank-churn-predictor.git
 cd bank-churn-predictor
-pip install -r app/requirements.txt
-uvicorn app.main:app --reload
-# → http://127.0.0.1:8000
+
+# (Optional) Create and activate a virtual environment
+python -m venv .venv
+.\.venv\Scripts\activate  # on Windows
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Run the FastAPI app
+uvicorn main:app --reload
+# → http://127.0.0.1:8000  (UI)
+# → http://127.0.0.1:8000/docs  (Swagger)
 ```
 
 ---
 
 ## 📡 API
 
-```
+```text
 POST /predict   →  churn probability + risk level (Low / Medium / High)
 GET  /health    →  model load status
 GET  /docs      →  Swagger UI
 ```
 
 **Sample request:**
+
 ```json
-{ "Age": 45, "Balance": 92000, "Geography": "Germany",
-  "Gender": "Female", "NumOfProducts": 1, "IsActiveMember": 0,
-  "CreditScore": 620, "EstimatedSalary": 72000 }
+{
+  "CreditScore": 620,
+  "Age": 45,
+  "Balance": 92000,
+  "EstimatedSalary": 72000,
+  "NumOfProducts": 1,
+  "IsActiveMember": 0,
+  "Geography": "Germany",
+  "Gender": "Female"
+}
 ```
 
 **Sample response:**
+
 ```json
-{ "churn": true, "churn_probability": 0.78, "risk_level": "High",
-  "message": "Customer is likely to churn." }
+{
+  "churn": true,
+  "churn_probability": 0.78,
+  "risk_level": "High",
+  "message": "Target for retention",
+  "insights": [
+    "Critical Risk: Analysis shows a near 100% exit rate for 4-product users.",
+    "Regional Alert: German customers show higher balances and 2x the churn risk.",
+    "Demographic Driver: Customer is in the peak churn age bracket (45+)."
+  ]
+}
 ```
 
 ---
 
 ## 🛠 Tech Stack
 
-| | |
+| Category | Tools |
 |---|---|
-| Data & ML | pandas · numpy · scikit-learn · imbalanced-learn |
-| Visualization | matplotlib · seaborn |
-| Backend | FastAPI · Uvicorn · Pydantic · Jinja2 |
-| Frontend | HTML5 · CSS3 · Vanilla JS |
+| **Data & ML** | pandas · numpy · scikit-learn · imbalanced-learn |
+| **Visualization** | matplotlib · seaborn |
+| **Backend** | FastAPI · Uvicorn · Pydantic · Jinja2 |
+| **Frontend** | HTML5 · CSS3 · Vanilla JS |
 
 ---
 
@@ -169,4 +201,5 @@ GET  /docs      →  Swagger UI
 
 ---
 
-*MIT License*
+MIT License
+
