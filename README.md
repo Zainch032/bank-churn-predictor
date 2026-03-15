@@ -12,6 +12,12 @@ Improved churn **F1-score: 0.50 → 0.62** (+24% relative gain on the metric tha
 
 ---
 
+## 🚀 Live Demo
+
+Try the deployed app here: [Bank Churn – Hugging Face Space](https://huggingface.co/spaces/Zainch032/Bank_Churn).
+
+---
+
 ## 💡 The Problem Worth Solving
 
 Banks lose customers silently — no resignation letter, no complaint. By the time it's noticed, they're gone. Acquiring a replacement costs **5–7× more** than retention.
