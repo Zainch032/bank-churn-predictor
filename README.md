@@ -14,7 +14,7 @@ Improved churn **F1-score: 0.50 → 0.62** (+24% relative gain on the metric tha
 
 ## 🚀 Live Demo
 
-Try the deployed app here: [Bank Churn – Hugging Face Space](https://huggingface.co/spaces/Zainch032/Bank_Churn).
+Try the deployed app here: [Bank Churn – Hugging Face Space](https://huggingface.co/spaces/Zainch032/Bank_Churn)
 
 ---
 
@@ -31,7 +31,7 @@ Banks lose customers silently — no resignation letter, no complaint. By the ti
 | Phase | Detail |
 |---|---|
 | 🔍 **EDA** | Crosstabs, boxenplots, pivot tables, heatmaps — every feature interrogated against the target |
-| ✂️ **Feature Selection** | 4 features dropped with statistical evidence — `CreditScore`, `EstimatedSalary`, `HasCrCard`, `Tenure` |
+| ✂️ **Feature Selection** | 4 features dropped with statistical evidence |
 | ⚙️ **Preprocessing** | Leak-proof `Pipeline` — `StandardScaler` + `OneHotEncoder` inside `ColumnTransformer` |
 | 🤖 **Model Comparison** | 5 classifiers benchmarked on Precision, Recall, F1, ROC-AUC — not accuracy |
 | ⚖️ **SMOTE** | Synthetic oversampling on training data only — F1 jumped **0.50 → 0.62** |
@@ -41,30 +41,125 @@ Banks lose customers silently — no resignation letter, no complaint. By the ti
 
 ## 🔍 Exploratory Data Analysis
 
-The EDA wasn't just about understanding the data — it was about making every modeling decision defensible. Crosstab analysis on categorical features, boxenplots to compare full distributions (not just means), pivot tables aggregating multiple metrics, and skewness checks on numeric features split by the target.
+The EDA wasn't just about understanding data — every finding had to justify a modeling decision. No chart was made for decoration.
 
-The goal: understand *who churns* before predicting it.
+### Dataset Overview
+- **10,000 customers** · **14 features** · **20.4% churn rate**
+- Tools used: crosstab analysis, boxenplots, pivot tables, correlation heatmaps, skewness checks
 
-### What actually separates churners from stayers
+---
 
-- **Age** is the single strongest signal. Churned customers averaged **44.8 years** vs. **37.4** for those who stayed — a 7-year gap that shows up consistently across all geographies and genders.
-- **Geography** tells a stark story. Germany sits at **32.4% churn** while France and Spain hover around **16%**. That's double the rate — and German customers also hold the highest average balances (~$120k).
-- **Number of products** has the most dramatic non-linear pattern. Two products = **7.6% churn** (loyalty sweet spot). Three products = **82.7%**. Four products = **100%** — every single customer left.
-- **Active membership** is the most actionable lever. Inactive members churn at **26.9%** vs. **14.3%** for active ones — nearly double.
-- **Balance** is counter-intuitive. Higher-balance customers churn *more* — churned customers averaged **$91k** vs. **$72k** for stayers.
+### Age — The Strongest Signal
+Age was the single most predictive feature across every slice of the data.
 
-### What doesn't predict churn at all
+| Group | Average Age |
+|---|---|
+| Stayed | 37.4 years |
+| Churned | 44.8 years |
 
-Just as important:
+A **7-year gap** that held consistent across all geographies and genders. Customers in the 45–60 age bracket were dramatically overrepresented in churners. Younger customers showed strong loyalty regardless of other factors.
 
-- **Credit score** (651 stayed vs. 645 churned)
-- **Estimated salary** ($100k vs. $101k)
-- **Credit card ownership**
-- **Tenure**
+The pattern was not just a mean difference — the entire age distribution shifted. Boxenplots showed the upper tail of the churned group extending well into the 55–65 range while stayers clustered tightly around 30–40.
 
-All showed near-zero difference between groups and were dropped before modeling to reduce noise.
+**Modeling implication:** Age was kept as a top feature and confirmed via feature importance after training. It ranked as the most important variable in the final Gradient Boosting model.
 
-> Full analysis with all visualizations in `notebook/churn.ipynb`
+---
+
+### Geography — Double the Risk in Germany
+Geography turned out to be far more than a demographic label.
+
+| Country | Churn Rate | Avg Balance |
+|---|---|---|
+| France | ~16% | ~$62k |
+| Spain | ~16% | ~$61k |
+| **Germany** | **32.4%** | **~$120k** |
+
+Germany has **double the churn rate** of France and Spain — and German customers also hold the highest average balances. This is a critical business insight: the most valuable customers by balance are also the most likely to leave.
+
+France and Spain behaved almost identically across every metric — suggesting geography encodes something structural about the banking relationship or market competition in each country rather than just demographics.
+
+**Modeling implication:** Geography was kept as a categorical feature. One-hot encoding was applied inside the pipeline to avoid ordinal assumptions.
+
+---
+
+### Number of Products — The Most Dramatic Pattern
+This was the most surprising and non-linear finding in the entire dataset.
+
+| Products | Churn Rate |
+|---|---|
+| 1 product | 27.7% |
+| **2 products** | **7.6%** ← loyalty sweet spot |
+| 3 products | 82.7% |
+| 4 products | 100% |
+
+Two products is the loyalty sweet spot — customers feel engaged without feeling trapped. Three or four products shows a complete reversal — every single 4-product customer churned. This suggests over-selling or forced bundling creates resentment rather than loyalty.
+
+The jump from 7.6% to 82.7% between two and three products is one of the most dramatic non-linear relationships possible in a dataset. No linear model can capture this — it requires splits and interactions.
+
+**Modeling implication:** This non-linear relationship is exactly why tree-based models outperformed linear ones. Gradient Boosting captured this interaction naturally through its sequential split structure.
+
+---
+
+### Active Membership — Most Actionable Lever
+Active membership status was the most directly actionable finding for a retention team.
+
+| Status | Churn Rate |
+|---|---|
+| Active member | 14.3% |
+| Inactive member | 26.9% |
+
+Inactive members churn at nearly **double the rate**. Unlike age or geography which cannot be changed, engagement can be directly influenced through targeted campaigns, app notifications, rewards programs, and personalized outreach.
+
+This makes active membership the highest-ROI intervention point — a customer flagged as inactive AND high-risk by the model is the ideal target for a retention campaign before they decide to leave.
+
+**Modeling implication:** Kept as a binary feature. Ranked as second most important variable in the final model after age.
+
+---
+
+### Balance — Counter-Intuitive Finding
+Higher balance customers churn *more* — opposite of what most banks assume.
+
+| Group | Average Balance |
+|---|---|
+| Stayed | ~$72k |
+| Churned | ~$91k |
+
+Wealthier customers are more likely to have multiple banking relationships and are more financially sophisticated — they actively compare rates, fees, and services across providers. A better offer from a competitor is more likely to move them.
+
+This also partially explains the Germany pattern — German customers had both the highest average balances and the highest churn rate.
+
+**Modeling implication:** Balance kept as a numeric feature with standard scaling applied inside the pipeline.
+
+---
+
+### Gender — Moderate Signal
+Female customers churned at a noticeably higher rate than male customers.
+
+| Gender | Churn Rate |
+|---|---|
+| Male | ~16% |
+| Female | ~25% |
+
+The gap held across geographies suggesting it reflects something about product-market fit or service experience rather than just demographic composition of the sample.
+
+**Modeling implication:** Kept as a binary encoded feature.
+
+---
+
+### Features Dropped — With Evidence
+
+These 4 features were dropped before modeling — not arbitrarily, but because the data showed near-zero difference between churners and stayers:
+
+| Feature | Stayed Avg | Churned Avg | Decision |
+|---|---|---|---|
+| CreditScore | 651 | 645 | Dropped |
+| EstimatedSalary | $100k | $101k | Dropped |
+| HasCrCard | 70.5% yes | 70.9% yes | Dropped |
+| Tenure | 5.03 years | 4.93 years | Dropped |
+
+Dropping noisy features reduced model complexity, shortened training time, and slightly improved generalization by removing features that added variance without signal.
+
+> Full visualizations and code in `notebook/churn.ipynb`
 
 ---
 
@@ -72,14 +167,16 @@ All showed near-zero difference between groups and were dropped before modeling 
 
 80% stayed, 20% churned. Baseline models trained on raw data had a cautious bias — high precision, terrible recall. They only flagged churners when nearly certain, missing most of them. F1 on the churn class: **0.50**.
 
-SMOTE synthesizes new minority-class samples by interpolating between existing ones in feature space — fundamentally different from duplicating rows. Applied inside the pipeline on training data only, no leakage.
+SMOTE synthesizes new minority-class samples by interpolating between existing ones in feature space — fundamentally different from simply duplicating rows. It creates plausible new examples that fill in the decision boundary rather than just repeating existing points.
+
+Applied inside the pipeline on training data only — no leakage into validation or test sets.
 
 | | Precision | Recall | F1 | ROC-AUC |
 |---|---|---|---|---|
 | Without SMOTE | 0.61 | 0.42 | 0.50 | 0.82 |
 | **With SMOTE** | **0.56** | **0.70** | **0.62** | **0.87** |
 
-Lower precision, much higher recall. For retention this is the right trade-off — a false alarm costs a retention email, a missed churner costs a customer.
+Lower precision, much higher recall. For retention this is the right trade-off — a false alarm costs a retention email, a missed churner costs a customer worth thousands in lifetime value.
 
 ---
 
@@ -93,7 +190,9 @@ Lower precision, much higher recall. For retention this is the right trade-off �
 | Random Forest | 0.60 | 0.85 |
 | **Gradient Boosting** ✅ | **0.62** | **0.87** |
 
-Gradient Boosting won because churn isn't linear — it captures the `Age × Geography × NumOfProducts` interactions that simpler models miss.
+Gradient Boosting won because churn isn't linear — it captures the `Age × Geography × NumOfProducts` interactions that simpler models miss. Each tree corrects the errors of the previous one, gradually learning the complex boundary between churners and stayers.
+
+Logistic Regression confirmed the feature selection decisions were sound — even a linear model reached 0.55 F1, meaning the remaining features carried real signal. The gap between Logistic Regression and Gradient Boosting (0.55 → 0.62) represents the value of capturing non-linear interactions.
 
 > Full comparison in `notebook/model.ipynb`
 
@@ -103,27 +202,21 @@ Gradient Boosting won because churn isn't linear — it captures the `Age × Geo
 
 ```text
 bank-churn-predictor/
-│
-├── main.py                    # FastAPI application (backend + API)
-├── requirements.txt           # Python dependencies
-│
+├── main.py
+├── requirements.txt
 ├── model/
-│   └── model_pipeline.pkl     # Trained sklearn pipeline
-│
+│   └── model_pipeline.pkl
 ├── templates/
-│   └── index.html             # Frontend UI (Jinja2 template)
-│
+│   └── index.html
 ├── static/
-│   ├── style.css              # Modern dashboard styling
-│   └── app.js                 # Frontend logic & API calls
-│
+│   ├── style.css
+│   └── app.js
 ├── data/
-│   ├── Churn_Modelling.csv    # Raw dataset
-│   └── Cleanind_data.csv      # Cleaned version
-│
+│   ├── Churn_Modelling.csv
+│   └── Cleanind_data.csv
 └── notebook/
-    ├── churn.ipynb            # EDA notebook
-    └── model.ipynb            # Modelling, SMOTE, comparison
+    ├── churn.ipynb
+    └── model.ipynb
 ```
 
 ---
@@ -131,63 +224,13 @@ bank-churn-predictor/
 ## ⚡ Quick Start
 
 ```bash
-git clone https://github.com/your-username/bank-churn-predictor.git
-cd bank-churn-predictor
-
-# (Optional) Create and activate a virtual environment
-python -m venv .venv
-.\.venv\Scripts\activate  # on Windows
-
-# Install dependencies
+git clone https://github.com/Zainch032/Bank_Churn.git
+cd Bank_Churn
 pip install -r requirements.txt
-
-# Run the FastAPI app
 uvicorn main:app --reload
-# → http://127.0.0.1:8000  (UI)
+# → http://127.0.0.1:8000       (UI)
 # → http://127.0.0.1:8000/docs  (Swagger)
 ```
-
----
-
-## 📡 API
-
-```text
-POST /predict   →  churn probability + risk level (Low / Medium / High)
-GET  /health    →  model load status
-GET  /docs      →  Swagger UI
-```
-
-**Sample request:**
-
-```json
-{
-  "CreditScore": 620,
-  "Age": 45,
-  "Balance": 92000,
-  "EstimatedSalary": 72000,
-  "NumOfProducts": 1,
-  "IsActiveMember": 0,
-  "Geography": "Germany",
-  "Gender": "Female"
-}
-```
-
-**Sample response:**
-
-```json
-{
-  "churn": true,
-  "churn_probability": 0.78,
-  "risk_level": "High",
-  "message": "Target for retention",
-  "insights": [
-    "Critical Risk: Analysis shows a near 100% exit rate for 4-product users.",
-    "Regional Alert: German customers show higher balances and 2x the churn risk.",
-    "Demographic Driver: Customer is in the peak churn age bracket (45+)."
-  ]
-}
-```
-
 ---
 
 ## 🛠 Tech Stack
@@ -207,5 +250,18 @@ GET  /docs      →  Swagger UI
 
 ---
 
+## Author
+
+**Muhammad Zain** — Final year Data Science student, Lahore, Pakistan
+
+- GitHub: [Zainch032](https://github.com/Zainch032)
+- LinkedIn: [Muhammad Zain](https://linkedin.com/in/muhammad-zain-9710692b4)
+- Hugging Face: [Zainch032](https://huggingface.co/Zainch032)
+
+---
+
 MIT License
+```
+
+---
 
