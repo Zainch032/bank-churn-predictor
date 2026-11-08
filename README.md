@@ -1,129 +1,124 @@
-# Bank Customer Churn Predictor
+# Bank Customer Churn: A Retention Decision
 
-End-to-end ML project — EDA, feature engineering, SMOTE, multi-model benchmarking, XGBoost tuning, and cost-based threshold selection.
+End-to-end churn project: business-first EDA, evidence-driven feature engineering, leak-proof resampling, 9-model benchmark, XGBoost tuning, and a **cost-based contact cutoff** that respects call-centre capacity.
 
 **Live demo:** [huggingface.co/spaces/Zainch032/Bank_Churn](https://huggingface.co/spaces/Zainch032/Bank_Churn)
 
 ---
 
-## The Problem
+## The Business Problem
 
-Customer churn is one of the most expensive problems in retail banking. When a customer closes their account or stops using services, the bank loses not just their current balance — it loses years of future transactions, loan interest, credit card fees, and cross-sell revenue. Studies consistently show that acquiring a new banking customer costs **5–7× more** than retaining an existing one.
+The book has **10,000 customers** and a **20.4% churn rate**: **2,037 customers left**, taking about **$186 million** in deposits. Churn here is quiet. There is no resignation letter; by the time an account has been dormant for months, the relationship is usually gone. Replacing a customer costs several times more than keeping one.
 
-What makes churn particularly hard to manage is that it's silent. A customer doesn't send a resignation letter or file a complaint before leaving. They simply stop using the app, let their balance drop to zero, and eventually move to a competitor. By the time the bank notices the pattern, the customer is already gone.
+The goal is to move the bank from a late review to a **ranked list of who to contact while there is still something to save**.
 
-Traditional approaches — like reviewing accounts after they've been dormant for 90 days — are reactive and too late. The goal of this project is to shift that from reactive to **proactive**: identify customers who are at risk of churning *before* they decide to leave, so the retention team can reach out while there's still a window to act.
+A model is only useful if three questions are answered first:
 
-The dataset contains **10,000 bank customers** with 14 features covering demographics (age, gender, geography), financial behavior (balance, number of products, estimated salary), and account status (active member, credit card holder, tenure). The target variable is binary: did the customer churn within the observed period?
+1. **Who is expensive to lose?** (age, balance, Germany, product count)
+2. **What can the bank actually change?** (activity and product policy, not age or country)
+3. **How many people can the team contact?** Missing a churner is planned at about **$5,000** of lifetime value; a wasted contact at about **$10**. The cutoff is a budget decision, not the default 0.5.
 
-With a **20.4% churn rate**, the dataset is moderately imbalanced — a model that predicts "stay" for every customer hits 80% accuracy while catching zero actual churners. That's the baseline this project had to beat, and accuracy was never the metric that mattered.
+> A model that predicts "stay" for everyone is 80% accurate and catches zero churners. Accuracy is the wrong scorecard, so this project uses F1, recall and cost.
+
+**Dataset:** [Bank Customer Churn (Kaggle)](https://www.kaggle.com/datasets/shubhammeshram579/bank-customer-churn-prediction) · 10,000 customers · 14 fields · target `Exited`.
 
 ---
 
-## What I Built
+## Approach
 
-| Phase | Detail |
+| Step | Business reason |
 |---|---|
-| EDA | Crosstabs, boxenplots, pivot tables — every feature tested against the target |
-| Feature Engineering | 5 interaction terms built from EDA findings |
-| Resampling | SMOTETomek inside a leak-proof pipeline |
-| Model Comparison | 9 classifiers benchmarked on F1, not accuracy |
-| Tuning | XGBoost + RandomizedSearchCV (40 iterations, 5-fold CV, scoring=F1) |
-| Threshold Selection | Two modes — F1-optimal and cost-optimal |
-| Deployment | FastAPI REST API + frontend prediction form |
+| Data quality check (0 duplicates, 0 missing) | A retention list built on bad rows wastes call-centre budget |
+| Drop `RowNumber`, `CustomerId`, `Surname` | Identifiers let a model memorise people instead of learning patterns |
+| Test every attribute against churn | Drop anything that does not change who gets contacted |
+| Engineer only what EDA proved | The product cliff and the Germany–balance pocket are not linear |
+| Stratified 80/20 split, resample **inside** the training pipeline | The test set keeps the real 20% churn rate, so scores stay honest |
+| Score on F1, then choose the cutoff from cost + a 30% capacity cap | Precision and recall translated into money and workload |
 
 ---
 
 ## Key EDA Findings
 
-**Age — strongest signal**
-Churners averaged 44.8 years vs 37.4 for stayers. The gap held across all geographies and genders. Ranked as top feature by XGBoost after training.
+| Finding | Evidence | Decision |
+|---|---|---|
+| **Age is the strongest split** | Churners average 44.8 yrs vs 37.4. Over-41s churn at **39.9%** vs **11.1%** for 41 and under (~3.6×) | Use age to prioritise coverage, not as the campaign message |
+| **Inactivity is the lever the bank can pull** | Inactive members churn at **26.9%** vs **14.3%**; ~64% of all exits are inactive customers | Fund re-activation first, ranked by balance |
+| **Germany is a market problem** | **32.4%** churn vs ~16% in France/Spain; ~$120k avg balance vs ~$62k; ~40% of all exits | Local desk and offer rather than a global email |
+| **Product count is non-linear** | 1 product: 27.7% · **2 products: 7.6%** · 3: 82.7% · 4: 100% | Cap cross-sell at 2; case-review the 60 four-product customers |
+| **High balances leave** | Leavers hold more than stayers at every tenure year (~$84–98k vs ~$70–75k) | Put relationship-manager time on high-balance customers |
+| **Zero-balance accounts are stable** | 13.8% churn vs 24.1% for funded accounts; holds within the young group (7.1% vs 13.5%) | Spend on customers with a balance |
+| **Gender gap is real** | Women 25.1% vs men 16.5% | Diagnose it (service, product fit); do **not** price or target by gender |
+| **Sharpest pocket** | Women over 41 with a balance: **51.8%** churn, 1,012 customers (10% of book), ~26% of all churners | Cover the whole over-41-with-balance list, applied evenly |
 
-**Number of products — most non-linear pattern**
-
-| Products | Churn Rate |
-|---|---|
-| 1 | 27.7% |
-| 2 | 7.6% ← sweet spot |
-| 3 | 82.7% |
-| 4 | 100% |
-
-Two products is the loyalty sweet spot. Three or more suggests over-selling. No linear model captures this — it's exactly why tree-based models outperform logistic regression here.
-
-**Germany — double the churn risk**
-
-| Country | Churn Rate |
-|---|---|
-| France | ~16% |
-| Spain | ~16% |
-| Germany | 32.4% |
-
-German customers also hold the highest average balances (~$120k vs ~$62k for France). The most valuable customers by balance are also the most likely to leave.
-
-**Active membership — most actionable lever**
-Inactive members churn at 26.9% vs 14.3% for active members. Unlike age or geography, engagement can be directly changed through campaigns and notifications.
-
-**Features dropped (with evidence)**
-
-| Feature | Stayed Avg | Churned Avg | Decision |
-|---|---|---|---|
-| CreditScore | 651 | 645 | Dropped |
-| EstimatedSalary | $100k | $101k | Dropped |
-| HasCrCard | 70.5% | 70.9% | Dropped |
-| Tenure | 5.03 yrs | 4.93 yrs | Dropped |
+**Little or no signal:** credit score (652 vs 645 avg), estimated salary (churn 19.3–21.9% across deciles; Mann-Whitney p = 0.23), credit-card ownership (~20% either way) and tenure (churn roughly 17–23% by year). These are not used as targeting rules.
 
 ---
 
 ## Feature Engineering
 
-Built 5 interaction terms directly from EDA findings:
+Five features, each tied to a pattern EDA already showed:
 
-| Feature | Rationale |
+| Feature | Why it exists |
 |---|---|
-| `Zero_Balance` | Disengaged accounts carry $0 balance |
-| `Balance_Salary_Ratio` | Financial sophistication independent of raw balance |
-| `Products_Bucket` | Directly encodes the 2-vs-3+ product cliff (7.6% → 82.7%) |
-| `Age_Inactive` | Interaction of the two strongest signals |
-| `Germany_HighBal` | Isolates the specific high-risk segment from EDA |
+| `Zero_Balance` | Empty accounts churn at 13.8%, funded at 24.1% |
+| `Balance_Salary_Ratio` | Salary is flat; the ratio asks whether the deposit is large relative to income |
+| `Products_Bucket` (3+ products) | Encodes the 7.6% → 83–100% cliff |
+| `Age_Inactive` | The two strongest signals combined |
+| `Germany_HighBal` | Germany with above-median balance, the market where rate and balance are both worst |
+
+**Model inputs:** `Age`, `Balance`, `CreditScore`, `EstimatedSalary`, `NumOfProducts`, `IsActiveMember`, the five engineered features, plus `Geography` and `Gender`. `Tenure` and `HasCrCard` are excluded. Numeric fields are scaled and categoricals encoded inside a `ColumnTransformer`.
 
 ---
 
-## Model Results
+## Modelling
 
-9 classifiers benchmarked with SMOTE + same preprocessing pipeline. Final model: **XGBoost** tuned with RandomizedSearchCV (40 iterations, F1 scoring, 5-fold stratified CV).
+1. **Benchmark:** nine classifiers (Logistic Regression, Random Forest, Gradient Boosting, Decision Tree, AdaBoost, Extra Trees, Ridge, SGD, XGBoost) compared on F1 with SMOTE inside the pipeline. Class weights or `scale_pos_weight` are used where the model supports them.
+2. **Tuning:** trees suit the product cliff and stacked risks, so XGBoost is tuned with `RandomizedSearchCV` (40 candidates, 5-fold stratified CV, scoring = F1) using **SMOTETomek**, which cleans noisy synthetic points before the model learns from them.
+3. **Best CV F1:** 0.6239.
+4. **Leakage control:** resampling runs only on training folds. The 2,000-customer test set (407 churners) is never resampled.
 
-### Threshold Selection
-
-Threshold selection is a **business decision**, not just a number to maximize.
+### Two operating modes (held-out test set)
 
 | Mode | Threshold | Recall | Precision | F1 | Accuracy |
 |---|---|---|---|---|---|
-| F1-optimal | ~0.545 | ~64% | ~63% | ~0.636 | ~85% |
-| Cost-optimal | ~0.410 | ~75% | ~52% | ~0.615 | ~81% |
+| **F1-optimal** (standing list) | 0.545 | 64.1% | 63.0% | 0.636 | ~85% |
+| **Cost-optimal** (funded campaign) | 0.410 | 74.7% | 52.1% | 0.614 | ~81% |
 
-**Cost-optimal logic:** missing a churner costs ~$5,000 in lifetime value. A false positive costs $10 (a retention email). Under a 30% campaign contact-capacity constraint, the cost-optimal threshold minimizes total expected business loss — naturally pushing recall higher, but stopping at the point where more contacts stop creating net value.
+**Cost-optimal logic:** a missed churner is planned at about $5,000 in lifetime value, a wasted contact at about $10, contacts are capped at 30% of the book, and a 30% save rate is assumed. The chosen cutoff contacts **29.2%** of the test set and catches ~75% of churners.
 
-**Why two modes matter:** a general deployment uses F1-optimal (balanced). When the retention team is running a campaign and has budget to contact more customers, cost-optimal mode is activated — it catches 75% of churners at the cost of more false alarms, which is acceptable when a retention email costs less than 1% of a customer's lifetime value.
+> The $5,000 / $10 / 30% figures are **planning assumptions**, not measured in the dataset. Re-run the threshold section with the bank's real values. The segment findings above do not depend on them.
 
 ---
 
-## Business Impact
+## What I'd Take to the Retention Meeting
 
-Based on the cost-optimal model at 10,000 customers (20% annual churn):
+Of 2,037 exits and ~$186M in deposits:
 
-- Additional churners detected vs baseline: ~+50 per cycle
-- If 30% of contacted churners are retained: ~15 additional retained customers
-- At $5,000 CLV: ~$75,000 saved per cycle
-- Campaign cost: negligible at $10/contact
+| Priority | Action |
+|---|---|
+| Over 41, with a balance (~45% churn) | Named relationship coverage and a reviewed rate, applied evenly to all customers |
+| Germany | Local desk and offers, with retained balance tracked separately |
+| One product, high balance (1,409 exits, ~$130M) | Move to a **second** product; do not sell a third |
+| Inactive members | Re-activation campaign, ranked by balance |
+| 3–4 products | Policy: cap cross-sell at 2; call all 60 four-product customers rather than fund a campaign |
+| Gender gap | Service review, not a gendered offer |
 
-**Actionable interventions by segment:**
+The model does not replace these segments. It **ranks inside them**, so a team that can contact only 30% of the book calls the highest expected-loss customers first. Measure each offer against a holdout group and stop it if it does not beat the holdout.
 
-| Segment | Churn Rate | Recommended Action |
-|---|---|---|
-| Germany customers | 32.4% | Dedicated retention team, localized offers |
-| 3-4 product holders | 82-100% | Cap cross-sell at 2 products, simplify portfolios |
-| Inactive members | 26.9% | Re-engagement campaigns, app notifications |
-| Age 45-60 + high balance | High | Relationship manager assignment |
+---
+
+## Project Structure
+
+```
+Bank_Churn/
+├── data/            # Churn_Modelling.csv, Cleaned_data.csv
+├── notebooks/       # bank_churn.ipynb (EDA → model → export)
+├── model/           # model_pipeline.pkl (full pipeline, not a bare classifier)
+├── main.py          # FastAPI app
+└── requirements.txt
+```
+
+The exported file is the **entire pipeline** (encoding, scaling, model), so the app can send raw, unscaled fields and get the same score the notebook would produce.
 
 ---
 
@@ -144,7 +139,7 @@ uvicorn main:app --reload
 
 | Category | Tools |
 |---|---|
-| Data & ML | pandas · numpy · scikit-learn · imbalanced-learn · XGBoost |
+| Data & ML | pandas · numpy · scikit-learn · imbalanced-learn · XGBoost · SciPy |
 | Visualization | matplotlib · seaborn |
 | Backend | FastAPI · Uvicorn · Pydantic |
 | Frontend | HTML · CSS · Vanilla JS |
@@ -153,9 +148,11 @@ uvicorn main:app --reload
 
 ## Author
 
-**Muhammad Zain** — Final year AI Engineering student, Lahore, Pakistan
+**Muhammad Zain**: Final-year AI Engineering student, Lahore, Pakistan
 
+- Portfolio: [zainai.me](https://zainai.me)
 - GitHub: [Zainch032](https://github.com/Zainch032)
+- Kaggle: [zain032](https://www.kaggle.com/zain032)
 - LinkedIn: [Muhammad Zain](https://linkedin.com/in/muhammad-zain-9710692b4)
 - Hugging Face: [Zainch032](https://huggingface.co/Zainch032)
 
