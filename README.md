@@ -110,28 +110,56 @@ The model does not replace these segments. It **ranks inside them**, so a team t
 ## Project Structure
 
 ```
-Bank_Churn/
-├── data/            # Churn_Modelling.csv, Cleaned_data.csv
-├── notebooks/       # bank_churn.ipynb (EDA → model → export)
-├── model/           # model_pipeline.pkl (full pipeline, not a bare classifier)
-├── main.py          # FastAPI app
-└── requirements.txt
+bank-churn-predictor/
+├── data/
+│   ├── Churn_Modelling.csv       # Original Kaggle dataset
+│   └── Cleaned_data.csv          # Exported modelling columns
+├── notebook/
+│   ├── 01_Data_Cleaning_EDA.ipynb
+│   ├── 02_Feature_Engineering.ipynb
+│   ├── 03_Model_Training.ipynb
+│   └── 04_Threshold_Evaluation.ipynb
+├── model/
+│   ├── model_pipeline.pkl        # Preprocessing + trained classifier
+│   └── decision_threshold.json
+├── main.py                       # FastAPI app
+├── requirements.txt
+└── runtime.txt
 ```
 
-The exported file is the **entire pipeline** (encoding, scaling, model), so the app can send raw, unscaled fields and get the same score the notebook would produce.
+The notebooks are intentionally sequential:
+
+1. **Data cleaning and EDA** documents data quality and the business patterns behind the modelling decisions.
+2. **Feature engineering** creates the five evidence-based features and writes the reproducible stratified split to `data/splits.pkl`.
+3. **Model training** benchmarks nine classifiers, tunes XGBoost with resampling inside cross-validation, and writes `model/model_pipeline.pkl`.
+4. **Threshold evaluation** compares F1- and cost-based operating points, writes `model/decision_threshold.json`, and produces the final evaluation plots.
+
+Run them from the `notebook/` directory in this order. The notebooks also resolve the project root when launched from the repository root, so they work in Jupyter, JupyterLab, and VS Code.
+
+The exported model is the **entire pipeline** (feature preprocessing, resampling, and classifier), so the app can send raw, unscaled fields and get the same score the notebook produces.
 
 ---
 
 ## Quick Start
 
 ```bash
-git clone https://github.com/Zainch032/Bank_Churn.git
-cd Bank_Churn
+git clone https://github.com/Zainch032/bank-churn-predictor.git
+cd bank-churn-predictor
 pip install -r requirements.txt
 uvicorn main:app --reload
 # UI  → http://127.0.0.1:8000
 # API → http://127.0.0.1:8000/docs
 ```
+
+### Rebuild the model
+
+```bash
+cd notebook
+jupyter notebook
+# Run 01 → 02 → 03 → 04
+```
+
+Notebook 3 performs a 40-candidate, five-fold randomized search and can take several minutes depending on the machine. Notebook 4 uses planning assumptions of `$5,000` missed lifetime value, `$10` per contact, a `30%` save rate, and a `30%` contact-capacity limit; replace these with measured bank values before using the threshold operationally.
 
 ---
 

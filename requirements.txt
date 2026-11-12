@@ -5,4 +5,9 @@ pandas
 numpy
 scikit-learn==1.3.2
 imbalanced-learn
+xgboost
+scipy
+matplotlib
+seaborn
+jupyter
 Jinja2
